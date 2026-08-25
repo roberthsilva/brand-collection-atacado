@@ -497,7 +497,7 @@
       display: grid;
       grid-template-rows: repeat(3, auto);
       grid-auto-flow: column;
-      grid-auto-columns: minmax(31%, 1fr);
+      grid-auto-columns: 104px;
       gap: .5rem;
       overflow-x: auto;
       overflow-y: hidden;
@@ -510,9 +510,28 @@
     }
     .filters::-webkit-scrollbar{ height: 4px; }
     .filters::-webkit-scrollbar-thumb{ background: var(--hairline); }
-    .filter-chip{ padding: .45rem .55rem; }
-    .filter-chip svg{ width: 17px; height: 17px; }
-    .filter-chip span{ font-size: .66rem; white-space: normal; line-height: 1.15; }
+    .filter-chip{
+      flex-direction: column;
+      justify-content: center;
+      gap: .3rem;
+      padding: .55rem .35rem;
+      text-align: center;
+      overflow: hidden;
+      min-width: 0;
+      width: 104px;
+      box-sizing: border-box;
+    }
+    .filter-chip svg{ width: 18px; height: 18px; }
+    .filter-chip span{
+      font-size: .64rem;
+      white-space: normal;
+      line-height: 1.2;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      hyphens: auto;
+      min-width: 0;
+      max-width: 100%;
+    }
     .filter-chip em{ display: none; }
   }
 </style>
@@ -819,17 +838,42 @@
       renderCatalog();
     });
 
+    function parseCatalogJs(text){
+      const marker = 'window.CATALOG_DATA = ';
+      const start = text.indexOf(marker);
+      if (start === -1) throw new Error('formato inesperado');
+      let jsonText = text.slice(start + marker.length).trim();
+      if (jsonText.endsWith(';')) jsonText = jsonText.slice(0, -1);
+      return JSON.parse(jsonText);
+    }
+
+    // fetch() to a file:// URL is blocked by the browser's CORS rules, so when the
+    // page itself was opened as a local file (double-clicked, not hosted), load
+    // data.js via a plain <script> tag instead — that works over file:// but can't
+    // be cache-busted, which is fine locally since there's no HTTP cache involved.
+    function loadViaScriptTag(){
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'data.js';
+        script.onload = () => {
+          if (window.CATALOG_DATA) resolve(window.CATALOG_DATA);
+          else reject(new Error('data.js carregou mas CATALOG_DATA não foi definido'));
+        };
+        script.onerror = () => reject(new Error('não consegui carregar data.js'));
+        document.head.appendChild(script);
+      });
+    }
+
+    async function loadViaFetch(){
+      const res = await fetch('data.js?t=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const text = await res.text();
+      return parseCatalogJs(text);
+    }
+
     async function loadCatalog(){
       try {
-        const res = await fetch('data.js?t=' + Date.now(), { cache: 'no-store' });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const text = await res.text();
-        const marker = 'window.CATALOG_DATA = ';
-        const start = text.indexOf(marker);
-        if (start === -1) throw new Error('formato inesperado');
-        let jsonText = text.slice(start + marker.length).trim();
-        if (jsonText.endsWith(';')) jsonText = jsonText.slice(0, -1);
-        const data = JSON.parse(jsonText);
+        const data = (location.protocol === 'file:') ? await loadViaScriptTag() : await loadViaFetch();
         PRODUCTS = data.products || [];
         CATEGORIES = data.categories || [];
       } catch(e){
