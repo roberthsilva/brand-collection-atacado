@@ -593,7 +593,7 @@
     try {
       const text = 'window.CATALOG_DATA = ' + JSON.stringify(CAT) + ';\n';
 
-      const MAX_ATTEMPTS = 3;
+      const MAX_ATTEMPTS = 6;
       let lastErr = null;
       for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++){
         try {
@@ -602,10 +602,14 @@
           break;
         } catch(e){
           lastErr = e;
-          const isConflict = e.status === 409 || e.status === 422;
-          if (isConflict && attempt < MAX_ATTEMPTS){
+          // 409/422 = another commit landed between our ref read and ref
+          // update (or GitHub's API briefly returned a stale ref right after
+          // a write). 403/429/5xx can also be transient (rate limit, token
+          // permission propagation delay). All are worth retrying.
+          const isRetryable = e.status === 409 || e.status === 422 || e.status === 403 || e.status === 429 || e.status >= 500;
+          if (isRetryable && attempt < MAX_ATTEMPTS){
             setStatus('loading', `Salvando... (tentativa ${attempt + 1})`);
-            await new Promise(r => setTimeout(r, 700 * attempt));
+            await new Promise(r => setTimeout(r, Math.min(600 * attempt, 3000)));
             continue;
           }
           throw e;
