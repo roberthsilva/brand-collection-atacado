@@ -651,14 +651,6 @@
 
   btnSave.addEventListener('click', saveChanges);
 
-  window.__adminDebug = {
-    get saving(){ return saving; },
-    get resaveQueued(){ return resaveQueued; },
-    get dirty(){ return dirty; },
-    get price0(){ return CAT && CAT.products[0] && CAT.products[0].price; },
-    get price1(){ return CAT && CAT.products[1] && CAT.products[1].price; },
-  };
-
   // ---------------- categories ----------------
 
   function categoryCounts(){
