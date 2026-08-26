@@ -614,7 +614,7 @@
           const isRetryable = e.status === 409 || e.status === 422 || e.status === 403 || e.status === 429 || e.status >= 500;
           if (isRetryable && attempt < MAX_ATTEMPTS){
             setStatus('loading', `Salvando... (tentativa ${attempt + 1})`);
-            await new Promise(r => setTimeout(r, Math.min(600 * attempt, 3000)));
+            await new Promise(r => setTimeout(r, Math.min(1000 * attempt, 5000)));
             continue;
           }
           throw e;
@@ -641,7 +641,10 @@
         resaveQueued = false;
         dirty = true;
         markDirty();
-        saveChanges();
+        // Give GitHub's backend a moment to fully settle the commit we just
+        // made before reading the ref again — reading it back-to-back can
+        // still race the write on GitHub's side even without our own cache.
+        setTimeout(saveChanges, 1500);
       }
     }
   }
