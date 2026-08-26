@@ -625,8 +625,14 @@
     } finally {
       saving = false;
       if (resaveQueued){
+        // A newer edit came in while this save was running. That edit is
+        // already inside CAT, but the success path above just reset `dirty`
+        // to false — so we can't gate the resave on `dirty` (it'd never
+        // fire). resaveQueued alone is the real signal here.
         resaveQueued = false;
-        if (dirty) saveChanges();
+        dirty = true;
+        markDirty();
+        saveChanges();
       }
     }
   }
