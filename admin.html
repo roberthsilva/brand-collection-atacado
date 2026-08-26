@@ -528,9 +528,53 @@
     });
     if (!res.ok){
       const body = await res.text().catch(() => '');
-      throw new Error('GitHub API ' + res.status + ': ' + body.slice(0, 200));
+      const err = new Error('GitHub API ' + res.status + ': ' + body.slice(0, 200));
+      err.status = res.status;
+      throw err;
     }
     return res.json();
+  }
+
+  // Pushes CAT to GitHub as a single commit. If the branch moved between
+  // reading the ref and updating it (another save landed in between), GitHub
+  // rejects the ref update with a 409/422 "not a fast forward" — in that case
+  // we just re-read the fresh ref and try the whole push again.
+  async function pushCatalogOnce(text){
+    const ref = await ghApi(`/git/ref/heads/${encodeURIComponent(GH_BRANCH)}`);
+    const latestCommitSha = ref.object.sha;
+    const commit = await ghApi(`/git/commits/${latestCommitSha}`);
+    const baseTreeSha = commit.tree.sha;
+
+    const blob = await ghApi('/git/blobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: utf8ToBase64(text), encoding: 'base64' }),
+    });
+
+    const tree = await ghApi('/git/trees', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        base_tree: baseTreeSha,
+        tree: [{ path: GH_PATH, mode: '100644', type: 'blob', sha: blob.sha }],
+      }),
+    });
+
+    const newCommit = await ghApi('/git/commits', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: 'Atualização do catálogo via admin',
+        tree: tree.sha,
+        parents: [latestCommitSha],
+      }),
+    });
+
+    await ghApi(`/git/refs/heads/${encodeURIComponent(GH_BRANCH)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sha: newCommit.sha }),
+    });
   }
 
   async function saveChanges(){
@@ -541,41 +585,25 @@
     try {
       const text = 'window.CATALOG_DATA = ' + JSON.stringify(CAT) + ';\n';
 
-      const ref = await ghApi(`/git/ref/heads/${encodeURIComponent(GH_BRANCH)}`);
-      const latestCommitSha = ref.object.sha;
-      const commit = await ghApi(`/git/commits/${latestCommitSha}`);
-      const baseTreeSha = commit.tree.sha;
-
-      const blob = await ghApi('/git/blobs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: utf8ToBase64(text), encoding: 'base64' }),
-      });
-
-      const tree = await ghApi('/git/trees', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          base_tree: baseTreeSha,
-          tree: [{ path: GH_PATH, mode: '100644', type: 'blob', sha: blob.sha }],
-        }),
-      });
-
-      const newCommit = await ghApi('/git/commits', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: 'Atualização do catálogo via admin',
-          tree: tree.sha,
-          parents: [latestCommitSha],
-        }),
-      });
-
-      await ghApi(`/git/refs/heads/${encodeURIComponent(GH_BRANCH)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sha: newCommit.sha }),
-      });
+      const MAX_ATTEMPTS = 3;
+      let lastErr = null;
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++){
+        try {
+          await pushCatalogOnce(text);
+          lastErr = null;
+          break;
+        } catch(e){
+          lastErr = e;
+          const isConflict = e.status === 409 || e.status === 422;
+          if (isConflict && attempt < MAX_ATTEMPTS){
+            setStatus('loading', `Salvando... (tentativa ${attempt + 1})`);
+            await new Promise(r => setTimeout(r, 700 * attempt));
+            continue;
+          }
+          throw e;
+        }
+      }
+      if (lastErr) throw lastErr;
 
       dirty = false;
       setStatus('edit', 'Conectado ao site');
