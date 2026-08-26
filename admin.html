@@ -518,7 +518,12 @@
   }
 
   async function ghApi(path, options){
+    // GitHub's read endpoints (e.g. /git/ref/heads/main) are served with
+    // Cache-Control: max-age=60, so a plain fetch() can silently return a
+    // stale ref for up to a minute — making every retry compute a stale
+    // parent and fail the same "not a fast forward" conflict forever.
     const res = await fetch(API_BASE + path, {
+      cache: 'no-store',
       ...options,
       headers: {
         'Authorization': 'token ' + GH_TOKEN,
