@@ -577,8 +577,16 @@
     });
   }
 
+  let resaveQueued = false;
+
   async function saveChanges(){
-    if (saving) return;
+    if (saving){
+      // A save is already in flight — don't lose this click's intent: queue
+      // another save to run right after the current one finishes.
+      resaveQueued = true;
+      toast('Já está salvando... sua última edição entra assim que terminar.');
+      return;
+    }
     saving = true;
     btnSave.disabled = true;
     setStatus('loading', 'Salvando...');
@@ -616,6 +624,10 @@
       toast('Não consegui salvar. Tenta de novo em instantes.', 3600);
     } finally {
       saving = false;
+      if (resaveQueued){
+        resaveQueued = false;
+        if (dirty) saveChanges();
+      }
     }
   }
 
