@@ -263,6 +263,7 @@
         <div class="header-actions">
           <span class="status-pill view" id="status-pill"><span class="pdot"></span><span id="status-text">Conectando...</span></span>
           <button class="btn btn-solid" id="btn-save" disabled>Salvar alterações</button>
+          <button class="btn btn-ghost btn-sm" id="btn-change-token">Trocar token</button>
           <button class="btn btn-ghost btn-sm" id="btn-logout">Sair</button>
         </div>
       </div>
@@ -457,6 +458,12 @@
 
   $('#btn-logout').addEventListener('click', () => {
     localStorage.removeItem('bc_admin_logged_in');
+    location.reload();
+  });
+
+  $('#btn-change-token').addEventListener('click', () => {
+    if (dirty && !confirm('Você tem alterações não salvas que serão perdidas. Trocar o token mesmo assim?')) return;
+    localStorage.removeItem('bc_admin_token');
     location.reload();
   });
 
