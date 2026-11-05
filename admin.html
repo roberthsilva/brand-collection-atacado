@@ -375,7 +375,7 @@
   const RAW_URL = `https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/${GH_BRANCH}/${GH_PATH}`;
   const API_BASE = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}`;
 
-  const THUMB = 130;
+  const THUMB = 600;
   let CAT = null;
   let dirty = false;
   let saving = false;
@@ -816,7 +816,7 @@
   function rowHtml(p){
     const catOptions = CAT.categories.map(c => `<option value="${escapeAttr(c)}"${c===p.category?' selected':''}>${escapeHtml(c)}</option>`).join('');
     return `<tr data-id="${p.id}" class="${p.esgotado?'row-esgotado':''}">
-      <td><img class="row-thumb" src="${p.thumb}" loading="lazy" alt=""></td>
+      <td><img class="row-thumb" src="${p.img || p.thumb}" loading="lazy" alt=""></td>
       <td class="row-name"><span class="n" title="${escapeAttr(p.name)}">${escapeHtml(p.name)}</span></td>
       <td class="row-cat"><select>${catOptions}</select></td>
       <td class="row-price"><input type="text" value="${p.price ?? ''}"></td>
@@ -866,7 +866,7 @@
       $('#f-oldprice').value = p.oldPrice ?? '';
       $('#f-description').value = p.description || '';
       $('#f-esgotado').checked = !!p.esgotado;
-      photoPreview.src = p.thumb;
+      photoPreview.src = p.img || p.thumb;
       $('#f-category').value = p.category;
     }
     photoInput.value = '';
@@ -902,7 +902,7 @@
           const side = Math.min(img.width, img.height);
           const sx = (img.width - side) / 2, sy = (img.height - side) / 2;
           ctx.drawImage(img, sx, sy, side, side, 0, 0, THUMB, THUMB);
-          resolve(canvas.toDataURL('image/jpeg', 0.62));
+          resolve(canvas.toDataURL('image/jpeg', 0.82));
         };
         img.src = reader.result;
       };
@@ -941,7 +941,7 @@
       const p = CAT.products.find(x => x.id === editingProductId);
       p.name = name; p.price = price; p.oldPrice = oldPrice; p.category = category;
       p.description = description; p.esgotado = esgotado;
-      if (pendingThumb) p.thumb = pendingThumb;
+      if (pendingThumb){ p.thumb = pendingThumb; delete p.img; } // foto nova substitui a antiga (a vitrine prefere p.img)
     }
     markDirty();
     closeModal();
