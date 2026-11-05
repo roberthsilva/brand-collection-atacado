@@ -375,7 +375,10 @@
   const RAW_URL = `https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/${GH_BRANCH}/${GH_PATH}`;
   const API_BASE = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}`;
 
-  const THUMB = 600;
+  const THUMB = 600; // usado só pelo blankThumb
+  const THUMB_SMALL = 160;
+  const FULL_SIZE = 1000;
+  const pendingFull = new Map(); // id do produto -> data URI JPEG full aguardando upload
   let CAT = null;
   let dirty = false;
   let saving = false;
@@ -622,6 +625,26 @@
     btnSave.disabled = true;
     setStatus('loading', 'Salvando...');
     try {
+      // Fotos full pendentes viram arquivos em assets/img/ ANTES do data.js.
+      // Falha aqui aborta o save; as edições (e os pendentes não enviados) ficam.
+      for (const [pid, uri] of Array.from(pendingFull.entries())){
+        const p = CAT.products.find(x => x.id === pid);
+        if (!p){ pendingFull.delete(pid); continue; }
+        setStatus('loading', 'Enviando foto...');
+        const fname = `${pid}-${Date.now()}.jpg`;
+        await ghApi(`/contents/assets/img/${fname}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: 'Foto de produto via admin',
+            content: uri.slice(uri.indexOf(',') + 1),
+            branch: GH_BRANCH,
+          }),
+        });
+        p.img = 'assets/img/' + fname;
+        if (pendingFull.get(pid) === uri) pendingFull.delete(pid);
+      }
+
       const text = 'window.CATALOG_DATA = ' + JSON.stringify(CAT) + ';\n';
 
       const MAX_ATTEMPTS = 6;
@@ -816,7 +839,7 @@
   function rowHtml(p){
     const catOptions = CAT.categories.map(c => `<option value="${escapeAttr(c)}"${c===p.category?' selected':''}>${escapeHtml(c)}</option>`).join('');
     return `<tr data-id="${p.id}" class="${p.esgotado?'row-esgotado':''}">
-      <td><img class="row-thumb" src="${p.img || p.thumb}" loading="lazy" alt=""></td>
+      <td><img class="row-thumb" src="${pendingFull.get(p.id) || p.img || p.thumb}" loading="lazy" alt=""></td>
       <td class="row-name"><span class="n" title="${escapeAttr(p.name)}">${escapeHtml(p.name)}</span></td>
       <td class="row-cat"><select>${catOptions}</select></td>
       <td class="row-price"><input type="text" value="${p.price ?? ''}"></td>
@@ -837,6 +860,7 @@
   const photoPreview = $('#photo-preview');
   const photoInput = $('#photo-input');
   let pendingThumb = null;
+  let pendingFullUri = null;
 
   function renderProductCategoryOptions(){
     const sel = $('#f-category');
@@ -846,6 +870,7 @@
   function openProductModal(id){
     editingProductId = id;
     pendingThumb = null;
+    pendingFullUri = null;
     const isNew = id === null;
     $('#modal-title').textContent = isNew ? 'Adicionar produto' : 'Editar produto';
     $('#btn-delete-product').style.display = isNew ? 'none' : 'inline-flex';
@@ -866,7 +891,7 @@
       $('#f-oldprice').value = p.oldPrice ?? '';
       $('#f-description').value = p.description || '';
       $('#f-esgotado').checked = !!p.esgotado;
-      photoPreview.src = p.img || p.thumb;
+      photoPreview.src = pendingFull.get(p.id) || p.img || p.thumb;
       $('#f-category').value = p.category;
     }
     photoInput.value = '';
@@ -882,30 +907,42 @@
   photoInput.addEventListener('change', () => {
     const file = photoInput.files[0];
     if (!file) return;
-    resizeImageToThumb(file).then(dataUri => {
-      pendingThumb = dataUri;
-      photoPreview.src = dataUri;
-    });
+    resizeImageToThumb(file).then(r => {
+      pendingThumb = r.thumb;
+      pendingFullUri = r.full;
+      photoPreview.src = r.full;
+    }).catch(() => toast('Não consegui ler essa imagem. Tente outra foto.'));
   });
 
+  // Gera duas versões: thumb pequeno (fallback/lista) e full (~1000px, vai como arquivo).
   function resizeImageToThumb(file){
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const img = new Image();
       const reader = new FileReader();
       reader.onload = () => {
         img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = THUMB; canvas.height = THUMB;
-          const ctx = canvas.getContext('2d');
-          ctx.fillStyle = '#f4e9d8';
-          ctx.fillRect(0, 0, THUMB, THUMB);
           const side = Math.min(img.width, img.height);
           const sx = (img.width - side) / 2, sy = (img.height - side) / 2;
-          ctx.drawImage(img, sx, sy, side, side, 0, 0, THUMB, THUMB);
-          resolve(canvas.toDataURL('image/jpeg', 0.82));
+          const make = (size, q) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = size; canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, size, size);
+            ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+            return canvas.toDataURL('image/jpeg', q);
+          };
+          resolve({
+            thumb: make(Math.min(THUMB_SMALL, side), 0.75),
+            full: make(Math.min(FULL_SIZE, side), 0.85),
+          });
         };
+        img.onerror = () => reject(new Error('imagem inválida'));
         img.src = reader.result;
       };
+      reader.onerror = () => reject(reader.error);
       reader.readAsDataURL(file);
     });
   }
@@ -937,11 +974,12 @@
         id: newId, name, price, oldPrice, esgotado, category, description,
         thumb: pendingThumb || blankThumb(),
       });
+      if (pendingFullUri) pendingFull.set(newId, pendingFullUri);
     } else {
       const p = CAT.products.find(x => x.id === editingProductId);
       p.name = name; p.price = price; p.oldPrice = oldPrice; p.category = category;
       p.description = description; p.esgotado = esgotado;
-      if (pendingThumb){ p.thumb = pendingThumb; delete p.img; } // foto nova substitui a antiga (a vitrine prefere p.img)
+      if (pendingThumb && pendingFullUri){ p.thumb = pendingThumb; pendingFull.set(p.id, pendingFullUri); } // vira arquivo novo no save; p.img é atualizado após o upload
     }
     markDirty();
     closeModal();
