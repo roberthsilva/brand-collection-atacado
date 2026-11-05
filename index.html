@@ -122,7 +122,8 @@
   }
   .nav-links a:not(.btn):hover::after{ right: 0; }
   .nav-links .hide-mobile{ display: inline; }
-  @media (max-width: 680px){ .nav-links .hide-mobile{ display: none; } }
+  /* celular: "Informações" sai do cabeçalho (fica no menu hambúrguer) para o topo não ficar apertado */
+  @media (max-width: 680px){ .nav-links .hide-mobile, .nav-links a.nav-info{ display: none; } }
   @media (max-width: 480px){ .nav-links a.nav-info{ font-size: .66rem; letter-spacing: .06em; } .nav-links .social-icon{ display: none; } .nav-links .btn{ padding: .7rem .75rem; letter-spacing: .08em; } }
   @media (max-width: 400px){ .nav{ gap: .6rem; } .nav-links .btn .short{ display: none !important; } .nav-links .btn{ padding: .7rem !important; gap: 0; } }
   .social-icon{
@@ -627,7 +628,10 @@
   .menu-btn svg{ width: 20px; height: 20px; display: block; }
   .nav-start{ display: flex; align-items: center; min-width: 0; flex-shrink: 1; }
   .nav-start .mark{ min-width: 0; }
-  @media (max-width: 480px){ .menu-btn{ width: 34px; height: 34px; margin-right: .35rem; } .menu-btn svg{ width: 18px; height: 18px; } }
+  .cat-side-link{ display: block; margin-top: 1rem; padding: .85rem .75rem; border-top: 1px solid var(--hairline); font-size: .72rem; font-weight: 600;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--ink); text-decoration: none; }
+  .cat-side-link:hover{ background: var(--stone); }
+  @media (max-width: 480px){ .menu-btn{ width: 40px; height: 40px; margin-right: .5rem; } }
   .catalog-main{ min-width: 0; }
   .cat-side-head{ display: flex; align-items: center; justify-content: space-between; margin-bottom: .8rem; padding-bottom: .8rem; border-bottom: 1px solid var(--hairline); }
   .cat-side-title{ font-size: .7rem; text-transform: uppercase; letter-spacing: .18em; color: var(--graphite); font-weight: 600; }
@@ -777,6 +781,7 @@
             </button>
           </div>
           <ul class="cat-side-list" id="cat-side-list"></ul>
+          <a class="cat-side-link" href="sobre.html">Informações</a>
         </aside>
         <div class="cat-overlay" id="cat-overlay" hidden></div>
 
