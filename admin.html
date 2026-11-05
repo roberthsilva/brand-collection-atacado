@@ -319,6 +319,7 @@
         <div>
           <label style="margin-bottom:.4rem">Foto</label>
           <input type="file" id="photo-input" accept="image/*">
+          <div id="photo-info" style="font-size:.8rem;margin-top:.4rem" hidden></div>
         </div>
       </div>
       <div class="field">
@@ -377,9 +378,10 @@
 
   const THUMB = 600; // usado só pelo blankThumb
   const THUMB_SMALL = 160;
-  const FULL_SIZE = 1000;
+  const FULL_SIZE = 1600;
   const pendingFull = new Map(); // id do produto -> data URI JPEG full aguardando upload
   let CAT = null;
+  let baseSha = null; // SHA do head da branch usado como base das edições
   let dirty = false;
   let saving = false;
   let activeCatFilter = null;
@@ -498,6 +500,12 @@
   async function loadFromGitHub(){
     setStatus('loading', 'Carregando catálogo...');
     try {
+      // Guarda o head da branch ANTES de ler o data.js (base das edições).
+      baseSha = null;
+      try {
+        const ref = await ghApi(`/git/ref/heads/${encodeURIComponent(GH_BRANCH)}`);
+        baseSha = ref.object.sha;
+      } catch(e){ console.warn('Não consegui ler o head da branch', e); }
       const res = await fetch(RAW_URL + '?t=' + Date.now(), { cache: 'no-store' });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const text = await res.text();
@@ -536,7 +544,7 @@
       cache: 'no-store',
       ...options,
       headers: {
-        'Authorization': 'token ' + GH_TOKEN,
+        ...(GH_TOKEN ? { 'Authorization': 'token ' + GH_TOKEN } : {}),
         'Accept': 'application/vnd.github+json',
         ...(options && options.headers ? options.headers : {}),
       },
@@ -590,12 +598,16 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sha: newCommit.sha }),
     });
+    baseSha = newCommit.sha;
   }
 
   // Turns the raw fetch/GitHub-API error into a message that actually says
   // what to do, instead of the old generic "tenta de novo" that hid whether
   // this was an expired token, a permission issue, or no connection at all.
   function describeSaveError(e){
+    if (e && e.stale){
+      return 'O catálogo foi alterado em outro lugar (ou o site foi atualizado). Recarregue esta página (Ctrl+F5) antes de salvar para não perder alterações.';
+    }
     if (e && e.status === 401){
       return 'Token de acesso inválido ou expirado. Apague o token salvo (Sair > Entrar de novo) e cole um novo token do GitHub.';
     }
@@ -625,6 +637,15 @@
     btnSave.disabled = true;
     setStatus('loading', 'Salvando...');
     try {
+      // Proteção: se o head da branch mudou desde que carregamos, não salva por cima.
+      if (baseSha){
+        const cur = await ghApi(`/git/ref/heads/${encodeURIComponent(GH_BRANCH)}`);
+        if (cur.object.sha !== baseSha){
+          const sErr = new Error('stale');
+          sErr.stale = true;
+          throw sErr;
+        }
+      }
       // Fotos full pendentes viram arquivos em assets/img/ ANTES do data.js.
       // Falha aqui aborta o save; as edições (e os pendentes não enviados) ficam.
       for (const [pid, uri] of Array.from(pendingFull.entries())){
@@ -632,7 +653,7 @@
         if (!p){ pendingFull.delete(pid); continue; }
         setStatus('loading', 'Enviando foto...');
         const fname = `${pid}-${Date.now()}.jpg`;
-        await ghApi(`/contents/assets/img/${fname}`, {
+        const up = await ghApi(`/contents/assets/img/${fname}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -641,6 +662,7 @@
             branch: GH_BRANCH,
           }),
         });
+        if (up && up.commit && up.commit.sha && baseSha) baseSha = up.commit.sha; // nosso próprio commit
         p.img = 'assets/img/' + fname;
         if (pendingFull.get(pid) === uri) pendingFull.delete(pid);
       }
@@ -895,6 +917,7 @@
       $('#f-category').value = p.category;
     }
     photoInput.value = '';
+    $('#photo-info').hidden = true;
     modalBackdrop.hidden = false;
   }
 
@@ -911,6 +934,14 @@
       pendingThumb = r.thumb;
       pendingFullUri = r.full;
       photoPreview.src = r.full;
+      const info = $('#photo-info');
+      const small = Math.min(r.w, r.h) < 800;
+      info.hidden = false;
+      info.style.cssText = 'font-size:.8rem;margin-top:.4rem;' + (small ? 'color:#b3261e;font-weight:600' : 'color:#2e6b3a');
+      info.textContent = `Foto original: ${r.w}×${r.h} px` + (small
+        ? ' — Foto pequena — vai ficar borrada na loja. Use uma foto com pelo menos 800 px (ideal 1200 px).'
+        : ' — resolução boa.');
+      info.dataset.small = small ? '1' : '0';
     }).catch(() => toast('Não consegui ler essa imagem. Tente outra foto.'));
   });
 
@@ -934,9 +965,36 @@
             ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
             return canvas.toDataURL('image/jpeg', q);
           };
+          // full: proporção original, sem recorte, lado maior <= FULL_SIZE, nunca amplia.
+          const makeFull = () => {
+            const w0 = img.naturalWidth || img.width, h0 = img.naturalHeight || img.height;
+            const k = Math.min(1, FULL_SIZE / Math.max(w0, h0));
+            const tw = Math.max(1, Math.round(w0 * k)), th = Math.max(1, Math.round(h0 * k));
+            let src = img, cw = w0, ch = h0;
+            // reduz em passos de 50% enquanto faltar mais de 2x
+            while (cw / 2 >= tw && ch / 2 >= th){
+              const nw = Math.round(cw / 2), nh = Math.round(ch / 2);
+              const c = document.createElement('canvas');
+              c.width = nw; c.height = nh;
+              const x = c.getContext('2d');
+              x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+              x.fillStyle = '#ffffff'; x.fillRect(0, 0, nw, nh);
+              x.drawImage(src, 0, 0, cw, ch, 0, 0, nw, nh);
+              src = c; cw = nw; ch = nh;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = tw; canvas.height = th;
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, tw, th);
+            ctx.drawImage(src, 0, 0, cw, ch, 0, 0, tw, th);
+            return canvas.toDataURL('image/jpeg', 0.92);
+          };
           resolve({
             thumb: make(Math.min(THUMB_SMALL, side), 0.75),
-            full: make(Math.min(FULL_SIZE, side), 0.85),
+            full: makeFull(),
+            w: img.naturalWidth || img.width,
+            h: img.naturalHeight || img.height,
           });
         };
         img.onerror = () => reject(new Error('imagem inválida'));
