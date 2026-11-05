@@ -742,6 +742,7 @@
     if (CAT.categories.includes(trimmed)){ toast('Já existe uma categoria com esse nome.'); return; }
     CAT.categories = CAT.categories.map(c => c === oldName ? trimmed : c);
     CAT.products.forEach(p => { if (p.category === oldName) p.category = trimmed; });
+    if (CAT.categoryImages && oldName in CAT.categoryImages){ CAT.categoryImages[trimmed] = CAT.categoryImages[oldName]; delete CAT.categoryImages[oldName]; }
     if (activeCatFilter === oldName) activeCatFilter = trimmed;
     markDirty();
     renderCategories();
@@ -757,6 +758,7 @@
     if (affected > 0 && !CAT.categories.includes('Outros')) CAT.categories.push('Outros');
     CAT.products.forEach(p => { if (p.category === name) p.category = 'Outros'; });
     CAT.categories = CAT.categories.filter(c => c !== name);
+    if (CAT.categoryImages) delete CAT.categoryImages[name];
     if (activeCatFilter === name) activeCatFilter = null;
     markDirty();
     renderCategories();

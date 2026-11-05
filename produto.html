@@ -8,6 +8,8 @@
 
 <style>
   :root{
+    --purple: #4a1d7a;
+    --purple-deep: #3b1565;
     --paper: #ffffff;
     --stone: #f6f5f3;
     --ink: #0d0d0d;
@@ -52,6 +54,8 @@
   .nav-links a:not(.btn):hover::after{ right: 0; }
   .nav-links .hide-mobile{ display: inline; }
   @media (max-width: 680px){ .nav-links .hide-mobile{ display: none; } }
+  @media (max-width: 480px){ .nav-links a.nav-info{ font-size: .66rem; letter-spacing: .06em; } .nav-links .social-icon{ display: none; } .nav-links .btn{ padding: .7rem .75rem; letter-spacing: .08em; } }
+  @media (max-width: 400px){ .nav{ gap: .6rem; } .nav-links .btn .short{ display: none !important; } .nav-links .btn{ padding: .7rem !important; gap: 0; } }
   .nav-links .btn .short{ display: none; }
   @media (max-width: 460px){
     .nav-links .btn .full{ display: none; }
@@ -71,6 +75,21 @@
   .social-icon::after{ content: none !important; }
   .social-icon svg{ width: 100%; height: 100%; }
   .social-icon:hover{ color: var(--graphite); }
+  .cart-btn{
+    display: inline-flex; align-items: center; gap: .45rem; flex-shrink: 0;
+    padding: .55rem .8rem; border: none; cursor: pointer; text-decoration: none;
+    background: var(--purple); color: var(--paper); font: inherit; line-height: 1;
+    transition: background .2s ease;
+  }
+  .cart-btn:hover{ background: var(--ink); }
+  .cart-btn svg{ width: 18px; height: 18px; }
+  .cart-btn .cart-count{
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 19px; height: 19px; padding: 0 .3rem; border-radius: 999px;
+    background: var(--paper); color: var(--purple); font-size: .68rem; font-weight: 700;
+  }
+  @media (max-width: 480px){ .cart-btn{ padding: .55rem .6rem; gap: .35rem; } }
+  @media (max-width: 400px){ .nav-links .cart-btn{ padding: .55rem .5rem; } .cart-btn svg{ width: 16px; height: 16px; } }
 
   .btn{
     position: relative; display: inline-flex; align-items: center; gap: 0.6rem;
@@ -81,12 +100,12 @@
   }
   .btn::before{ content: ""; position: absolute; inset: 0; z-index: -1; transform: scaleX(0); transform-origin: left; transition: transform 0.45s var(--ease); }
   .btn:hover{ transform: translateY(-1px); }
-  .btn-primary{ background: var(--ink); color: var(--paper); border: 1px solid var(--ink); }
+  .btn-primary{ background: var(--purple); color: var(--paper); border: 1px solid var(--purple); }
   .btn-primary::before{ background: var(--paper); }
-  .btn-primary:hover{ color: var(--ink); }
+  .btn-primary:hover{ color: var(--purple); }
   .btn-primary:hover::before{ transform: scaleX(1); }
-  .btn-outline{ background: transparent; color: var(--ink); border: 1px solid var(--ink); }
-  .btn-outline::before{ background: var(--ink); }
+  .btn-outline{ background: transparent; color: var(--purple); border: 1px solid var(--purple); }
+  .btn-outline::before{ background: var(--purple); }
   .btn-outline:hover{ color: var(--paper); }
   .btn-outline:hover::before{ transform: scaleX(1); }
   .btn-block{ width: 100%; justify-content: center; }
@@ -134,7 +153,7 @@
 
   footer{ border-top: 1px solid var(--hairline); padding-block: 2.3rem; margin-top: 2rem; }
   .foot-wrap{ display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; }
-  .foot-links{ display: flex; gap: 1.7rem; font-size: .74rem; text-transform: uppercase; letter-spacing: .12em; }
+  .foot-links{ display: flex; flex-wrap: wrap; gap: .6rem 1.7rem; font-size: .74rem; text-transform: uppercase; letter-spacing: .12em; }
   .foot-links a{ text-decoration: none; color: var(--ink); position: relative; padding-bottom: 3px; }
   .foot-links a::after{ content: ""; position: absolute; left: 0; right: 100%; bottom: 0; height: 1px; background: var(--ink); transition: right .3s var(--ease); }
   .foot-links a:hover::after{ right: 0; }
@@ -151,17 +170,6 @@
   .whatsapp-fab:hover{ transform: translateY(-2px); }
   .whatsapp-fab svg{ width: 28px; height: 28px; }
 
-  .cart-fab{
-    position: fixed; right: 1rem; bottom: 4.7rem; z-index: 70;
-    display: flex; align-items: center; gap: .5rem;
-    padding: .8rem 1.1rem; border: none; cursor: pointer;
-    background: var(--ink); color: var(--paper);
-    box-shadow: 0 12px 28px -10px rgba(0,0,0,0.45);
-    transition: transform .2s ease;
-  }
-  .cart-fab:hover{ transform: translateY(-2px); }
-  .cart-fab svg{ width: 18px; height: 18px; }
-  .cart-fab .cart-count{ display: inline-flex; align-items: center; justify-content: center; min-width: 19px; height: 19px; padding: 0 .3rem; border-radius: 999px; background: var(--paper); color: var(--ink); font-size: .68rem; font-weight: 700; }
 
   .cart-overlay{ position: fixed; inset: 0; background: rgba(13,13,13,0.5); z-index: 90; opacity: 0; pointer-events: none; transition: opacity .3s ease; }
   .cart-overlay.open{ opacity: 1; pointer-events: auto; }
@@ -190,8 +198,8 @@
   .cart-total-row{ display: flex; justify-content: space-between; align-items: baseline; margin-bottom: .9rem; }
   .cart-total-row .label{ font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--graphite); }
   .cart-total-row .value{ font-size: 1.15rem; font-weight: 600; }
-  .cart-btn-primary{ display: block; width: 100%; text-align: center; padding: .9rem 1rem; background: var(--ink); color: var(--paper); border: 1px solid var(--ink); font-family: var(--font); font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; cursor: pointer; transition: all .18s ease; }
-  .cart-btn-primary:hover{ background: #2a2a2a; }
+  .cart-btn-primary{ display: block; width: 100%; text-align: center; padding: .9rem 1rem; background: var(--purple); color: var(--paper); border: 1px solid var(--purple); font-family: var(--font); font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; cursor: pointer; transition: all .18s ease; }
+  .cart-btn-primary:hover{ background: var(--purple-deep); }
   .cart-btn-primary:disabled{ opacity: .4; cursor: not-allowed; }
 
   .not-found{ padding-block: 6rem; text-align: center; color: var(--graphite); }
@@ -208,9 +216,11 @@
       </a>
       <div class="nav-links">
         <a class="hide-mobile" href="index.html#catalogo">Catálogo</a>
+        <a class="nav-info" href="sobre.html">Informações</a>
         <a class="social-icon" href="https://www.instagram.com/perfumesbrandcollectionbr" target="_blank" rel="noopener" aria-label="Instagram">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1" fill="currentColor" stroke="none"/></svg>
         </a>
+        <button class="cart-btn" id="cart-btn" type="button" aria-label="Abrir carrinho"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 6h15l-1.5 9h-12L5 3H2"/><circle cx="9" cy="20" r="1.4" fill="currentColor" stroke="none"/><circle cx="18" cy="20" r="1.4" fill="currentColor" stroke="none"/></svg><span class="cart-count" id="cart-count">0</span></button>
         <a class="btn btn-primary" href="https://wa.me/5511964051453" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12.04 2c-5.5 0-9.96 4.46-9.96 9.96 0 1.76.46 3.47 1.33 4.98L2 22l5.2-1.36a9.9 9.9 0 0 0 4.84 1.23h.01c5.5 0 9.96-4.46 9.96-9.96S17.54 2 12.04 2zm0 18.2a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.09.81.82-3.01-.2-.31a8.22 8.22 0 1 1 6.96 3.84zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.17.25-.64.81-.78.97-.14.17-.29.19-.54.06-.25-.12-1.04-.38-1.98-1.22-.73-.65-1.23-1.46-1.37-1.71-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43-.14-.01-.31-.01-.47-.01-.17 0-.44.06-.67.31-.23.25-.87.85-.87 2.08s.89 2.41 1.01 2.58c.12.17 1.76 2.69 4.27 3.77.6.26 1.06.41 1.43.53.6.19 1.14.16 1.57.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14-1.18-.06-.1-.23-.16-.48-.28z"/></svg>
           <span class="full">Falar no WhatsApp</span><span class="short">WhatsApp</span>
@@ -235,6 +245,7 @@
       <div class="foot-links">
         <a href="https://www.instagram.com/perfumesbrandcollectionbr" target="_blank" rel="noopener">Instagram</a>
         <a href="index.html#catalogo">Catálogo</a>
+        <a href="sobre.html">Informações</a>
         <a href="https://linktr.ee/perfumesbrandcollectionbra" target="_blank" rel="noopener">Linktree</a>
       </div>
     </div>
@@ -243,10 +254,6 @@
     </div>
   </footer>
 
-  <button class="cart-fab" id="cart-fab" aria-label="Abrir carrinho">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6h15l-1.5 9h-12L5 3H2"/><circle cx="9" cy="20" r="1.4" fill="currentColor" stroke="none"/><circle cx="18" cy="20" r="1.4" fill="currentColor" stroke="none"/></svg>
-    <span class="cart-count" id="cart-count">0</span>
-  </button>
 
   <a class="whatsapp-fab" id="whatsapp-fab" href="https://wa.me/5511964051453" target="_blank" rel="noopener" aria-label="Falar no WhatsApp">
     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2c-5.5 0-9.96 4.46-9.96 9.96 0 1.76.46 3.47 1.33 4.98L2 22l5.2-1.36a9.9 9.9 0 0 0 4.84 1.23h.01c5.5 0 9.96-4.46 9.96-9.96S17.54 2 12.04 2zm0 18.2a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.09.81.82-3.01-.2-.31a8.22 8.22 0 1 1 6.96 3.84zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.17.25-.64.81-.78.97-.14.17-.29.19-.54.06-.25-.12-1.04-.38-1.98-1.22-.73-.65-1.23-1.46-1.37-1.71-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43-.14-.01-.31-.01-.47-.01-.17 0-.44.06-.67.31-.23.25-.87.85-.87 2.08s.89 2.41 1.01 2.58c.12.17 1.76 2.69 4.27 3.77.6.26 1.06.41 1.43.53.6.19 1.14.16 1.57.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14-1.18-.06-.1-.23-.16-.48-.28z"/></svg>
@@ -314,7 +321,7 @@
       return `
         <div class="product">
           <div class="product-photo${esg ? ' is-esgotado' : ''}">
-            <img src="${p.thumb}" alt="${p.name.replace(/"/g,'&quot;')}">
+            <img src="${p.img || p.thumb}" alt="${p.name.replace(/"/g,'&quot;')}">
           </div>
           <div class="product-info">
             <span class="eyebrow product-cat">${p.category}</span>
@@ -427,7 +434,7 @@
     function cartTotalQty(){ return cartEntries().reduce((s, e) => s + e.qty, 0); }
     function cartTotalPrice(){ return cartEntries().reduce((s, e) => s + e.qty * (e.product.price || 0), 0); }
 
-    const cartFab = document.getElementById('cart-fab');
+    const cartFab = document.getElementById('cart-btn');
     const cartCountEl = document.getElementById('cart-count');
     const cartOverlay = document.getElementById('cart-overlay');
     const cartDrawer = document.getElementById('cart-drawer');
@@ -465,7 +472,7 @@
       }
       cartBody.innerHTML = entries.map(e => `
         <div class="cart-item" data-id="${e.id}">
-          <img src="${e.product.thumb}" alt="">
+          <img src="${e.product.img || e.product.thumb}" alt="">
           <div class="cart-item-info">
             <div class="cart-item-name">${e.product.name}</div>
             <div class="cart-item-price">${fmtBRL(e.product.price)} / un</div>
