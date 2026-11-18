@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Produto · Brand Collection Atacado</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,6 +25,13 @@
   }
 
   *{ box-sizing: border-box; }
+  html{ -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: hidden; max-width: 100%; }
+  img, video{ max-width: 100%; height: auto; }
+  .wrap, .wrap-wide{ width: 100%; }
+  @supports (padding: max(0px)){
+    body{ padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+  }
+
   html{ scroll-behavior: smooth; }
   body{
     margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font);
@@ -220,9 +227,6 @@
       <div class="nav-links">
         <a class="hide-mobile" href="index.html#catalogo">Catálogo</a>
         <a class="nav-info" href="sobre.html">Informações</a>
-        <a class="social-icon" href="https://www.instagram.com/perfumesbrandcollectionbr" target="_blank" rel="noopener" aria-label="Instagram">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1" fill="currentColor" stroke="none"/></svg>
-        </a>
         <button class="cart-btn" id="cart-btn" type="button" aria-label="Abrir carrinho"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 6h15l-1.5 9h-12L5 3H2"/><circle cx="9" cy="20" r="1.4" fill="currentColor" stroke="none"/><circle cx="18" cy="20" r="1.4" fill="currentColor" stroke="none"/></svg><span class="cart-count" id="cart-count">0</span></button>
         <a class="btn btn-primary" href="https://wa.me/5511964051453" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M12.04 2c-5.5 0-9.96 4.46-9.96 9.96 0 1.76.46 3.47 1.33 4.98L2 22l5.2-1.36a9.9 9.9 0 0 0 4.84 1.23h.01c5.5 0 9.96-4.46 9.96-9.96S17.54 2 12.04 2zm0 18.2a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.09.81.82-3.01-.2-.31a8.22 8.22 0 1 1 6.96 3.84zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.17.25-.64.81-.78.97-.14.17-.29.19-.54.06-.25-.12-1.04-.38-1.98-1.22-.73-.65-1.23-1.46-1.37-1.71-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43-.14-.01-.31-.01-.47-.01-.17 0-.44.06-.67.31-.23.25-.87.85-.87 2.08s.89 2.41 1.01 2.58c.12.17 1.76 2.69 4.27 3.77.6.26 1.06.41 1.43.53.6.19 1.14.16 1.57.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14-1.18-.06-.1-.23-.16-.48-.28z"/></svg>
@@ -446,6 +450,17 @@
     const cartTitle = document.getElementById('cart-title');
 
     function updateCartBadge(){ cartCountEl.textContent = cartTotalQty(); }
+
+    // Re-sincroniza o carrinho ao voltar para a página (botão voltar / bfcache / outra aba)
+    function syncCartFromStorage(){
+      cart = loadCart();
+      updateCartBadge();
+      if (typeof cartDrawer !== 'undefined' && cartDrawer.classList.contains('open') && cartView === 'items') renderCartDrawer();
+    }
+    window.addEventListener('pageshow', syncCartFromStorage);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) syncCartFromStorage(); });
+    window.addEventListener('storage', e => { if (e.key === 'bc_cart') syncCartFromStorage(); });
+
 
     function openCart(){ cartView = 'items'; renderCartDrawer(); cartOverlay.classList.add('open'); cartDrawer.classList.add('open'); }
     function closeCart(){ cartOverlay.classList.remove('open'); cartDrawer.classList.remove('open'); }
